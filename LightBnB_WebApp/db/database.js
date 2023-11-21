@@ -1,5 +1,29 @@
+const {Pool} = require('pg');
 const properties = require("./json/properties.json");
 const users = require("./json/users.json");
+
+//Connection with db
+const config = {
+  user: 'labber',
+  password: 'labber',
+  host: 'localhost',
+  database: 'lightbnb'
+}
+const pool = new Pool(config);
+
+// test query
+// pool.query(`
+//   SELECT title
+//   FROM properties
+//   LIMIT 10;
+// `)
+// .then(response => {
+//   console.log(response);
+// })
+// .catch(error => {
+//   console.error('error from test query:', error);
+// });
+
 
 /// Users
 
@@ -9,14 +33,39 @@ const users = require("./json/users.json");
  * @return {Promise<{}>} A promise to the user.
  */
 const getUserWithEmail = function (email) {
-  let resolvedUser = null;
-  for (const userId in users) {
-    const user = users[userId];
-    if (user && user.email.toLowerCase() === email.toLowerCase()) {
-      resolvedUser = user;
-    }
-  }
-  return Promise.resolve(resolvedUser);
+  const queryString = `
+
+  SELECT id, name, email, password
+  FROM users
+  WHERE email = $1
+  LIMIT 1;
+
+  `;
+  const values = [`${email}`]
+  
+  return pool.query(queryString,values)
+            .then((response) => {
+              //console.log(response.rows);
+              if (response.rows.length > 0) {
+                return response.rows[0];
+              } else {
+                return null;
+              }
+            })
+            .catch((error) => {
+              console.error(error.message);
+            })
+
+
+
+  // let resolvedUser = null;
+  // for (const userId in users) {
+  //   const user = users[userId];
+  //   if (user && user.email.toLowerCase() === email.toLowerCase()) {
+  //     resolvedUser = user;
+  //   }
+  // }
+  // return Promise.resolve(resolvedUser);
 };
 
 /**
@@ -25,7 +74,29 @@ const getUserWithEmail = function (email) {
  * @return {Promise<{}>} A promise to the user.
  */
 const getUserWithId = function (id) {
-  return Promise.resolve(users[id]);
+  const queryString = `
+
+  SELECT id, name, email, password
+  FROM users
+  WHERE id = $1;
+
+  `;
+  const values = [`${id}`]
+  return pool.query(queryString,values)
+            .then((response) => {
+              // console.log(response.rows);
+              if (response.rows.length > 0) {
+                return response.rows[0];
+              } else {
+                return null;
+              }
+            })
+            .catch((error) => {
+              console.error(error.message);
+            })
+
+
+  //return Promise.resolve(users[id]);
 };
 
 /**
@@ -34,10 +105,33 @@ const getUserWithId = function (id) {
  * @return {Promise<{}>} A promise to the user.
  */
 const addUser = function (user) {
-  const userId = Object.keys(users).length + 1;
-  user.id = userId;
-  users[userId] = user;
-  return Promise.resolve(user);
+  const queryString = `
+
+  INSERT INTO users (name, email, password)
+  VALUES ($1,$2,$3)
+  RETURNING *;
+
+  `;
+  const values = [`${user.name}`,`${user.email}`,`${user.password}`];
+  return pool.query(queryString,values)
+            .then((response) => {
+              // console.log(response.rows);
+              if (response.rows.length > 0) {
+                return response.rows[0];
+              } else {
+                return null;
+              }
+            })
+            .catch((error) => {
+              console.error(error.message);
+            })
+
+
+
+  // const userId = Object.keys(users).length + 1;
+  // user.id = userId;
+  // users[userId] = user;
+  // return Promise.resolve(user);
 };
 
 /// Reservations
@@ -60,11 +154,30 @@ const getAllReservations = function (guest_id, limit = 10) {
  * @return {Promise<[{}]>}  A promise to the properties.
  */
 const getAllProperties = function (options, limit = 10) {
-  const limitedProperties = {};
-  for (let i = 1; i <= limit; i++) {
-    limitedProperties[i] = properties[i];
-  }
-  return Promise.resolve(limitedProperties);
+  const queryString = `
+    SELECT *
+    FROM properties
+    LIMIT $1;
+  `;
+  const values = [`${limit}`];
+
+  return pool.query(queryString,values)
+            .then((response) => {
+              // console.log(response.rows);
+              return response.rows;
+            })
+            .catch((error) => {
+              console.error(error.message);
+            })
+
+
+
+
+  // const limitedProperties = {};
+  // for (let i = 1; i <= limit; i++) {
+  //   limitedProperties[i] = properties[i];
+  // }
+  // return Promise.resolve(limitedProperties);
 };
 
 /**
